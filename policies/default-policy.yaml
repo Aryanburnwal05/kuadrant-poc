@@ -1,0 +1,28 @@
+apiVersion: kuadrant.io/v1alpha1
+kind: MCPRouteAccessPolicy
+metadata:
+  name: tool-auth-policy
+spec:
+  rules:
+    - name: guest-agent-rules
+      match: "request.headers['x-mcp-agent'] == 'guest-agent'"
+      allowedTools:
+        - add
+    - name: student-agent-rules
+      match: "request.headers['x-mcp-agent'] == 'student-agent'"
+      allowedTools:
+        - add
+        - subtract
+      cel:
+        - "tool.name == 'read_file' && tool.arguments.filepath.startsWith('public/')"
+    - name: operator-agent-rules
+      match: "request.headers['x-mcp-agent'] == 'operator-agent'"
+      allowedTools:
+        - add
+        - subtract
+        - read_file
+    - name: admin-agent-rules
+      match: "request.headers['x-mcp-agent'] == 'admin-agent'"
+      allowedTools:
+        - "*"
+

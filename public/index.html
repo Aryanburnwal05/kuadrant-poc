@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kuadrant MCP Gateway AccessPolicy POC</title>
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="logo-icon">K</div>
+      <div class="brand-text">
+        <h1>Kuadrant MCP Route AccessPolicy</h1>
+        <p>Tool-Level Authorization Proof-of-Concept • CNCF Mentorship</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <span class="badge badge-purple"><i class="fa-solid fa-server"></i> Mock Gateway Active</span>
+      <span class="badge badge-purple"><i class="fa-solid fa-shield-halved"></i> Authorino Mocked</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+  
+    <!-- METRICS DASHBOARD -->
+    <div class="metrics-grid" id="metricsContainer">
+      <div class="metric-card">
+        <div class="metric-icon"><i class="fa-solid fa-server"></i></div>
+        <div class="metric-value" id="metricTotal">0</div>
+        <div class="metric-label">Total Requests</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon" style="color: #4ade80;"><i class="fa-solid fa-check-circle"></i></div>
+        <div class="metric-value" id="metricAllowed">0</div>
+        <div class="metric-label">Allowed Access</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon" style="color: #f87171;"><i class="fa-solid fa-ban"></i></div>
+        <div class="metric-value" id="metricDenied">0</div>
+        <div class="metric-label">Denied Access</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon" style="color: #60a5fa;"><i class="fa-solid fa-shield-halved"></i></div>
+        <div class="metric-value" id="metricRate">100.0%</div>
+        <div class="metric-label">Protection Rate</div>
+      </div>
+    </div>
+
+    <!-- MAIN TWO-COLUMN LAYOUT -->
+    <div class="dashboard-columns">
+    
+      <!-- LEFT COLUMN: Simulator + Results -->
+      <div class="simulator-panel">
+
+      <!-- Simulation Controller Card -->
+      <div class="card">
+        <div class="card-title">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          MCP Agent Client Simulator
+        </div>
+
+        <div class="config-group">
+          <div class="input-field">
+            <label for="agentSelect"><i class="fa-solid fa-user-shield"></i> Client Identity (x-mcp-agent)</label>
+            <select id="agentSelect">
+              <option value="guest-agent">guest-agent (add only)</option>
+              <option value="student-agent">student-agent (Restricted Rules)</option>
+              <option value="operator-agent">operator-agent (Standard access)</option>
+              <option value="admin-agent">admin-agent (All Access)</option>
+            </select>
+          </div>
+
+          <div class="input-field">
+            <label for="methodSelect"><i class="fa-solid fa-code-branch"></i> MCP API Method</label>
+            <select id="methodSelect">
+              <option value="tools/list">GET /tools/list (List and Filter Tools)</option>
+              <option value="tools/call">POST /tools/call (Call specific Tool)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="config-group" id="toolCallGroup" style="display: none; grid-template-columns: 1fr 1fr;">
+          <div class="input-field">
+            <label for="toolSelect"><i class="fa-solid fa-screwdriver-wrench"></i> Tool to Call</label>
+            <select id="toolSelect">
+              <option value="add">add (Add 2 numbers)</option>
+              <option value="subtract">subtract (Subtract 2 numbers)</option>
+              <option value="read_file">read_file (Securely read system file)</option>
+              <option value="delete_database">delete_database (DANGER: Delete Database)</option>
+            </select>
+          </div>
+
+          <div class="input-field">
+            <label for="toolParams"><i class="fa-solid fa-brackets-curly"></i> Arguments (JSON)</label>
+            <input type="text" id="toolParams" value='{ "a": 5, "b": 10 }'>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button class="btn" id="runSimBtn">
+            <i class="fa-solid fa-play"></i> Run Simulation Flow
+          </button>
+          <button class="btn btn-secondary" id="resetSimBtn">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Simulation Output Pipeline Details -->
+      <div class="card" style="flex-grow: 1;">
+        <div class="card-title">
+          <i class="fa-solid fa-terminal"></i>
+          Simulation Pipeline & Decision Logs
+        </div>
+
+        <!-- Verdict banner (dynamic) -->
+        <div id="verdictBanner" class="verdict-banner">
+          <div class="verdict-icon">
+            <i id="verdictIcon" class="fa-solid"></i>
+          </div>
+          <div class="verdict-info">
+            <h2 id="verdictTitle"></h2>
+            <p id="verdictSub"></p>
+          </div>
+        </div>
+
+        <!-- Scrollable Steps -->
+        <div class="simulation-steps" id="simSteps">
+          <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+            <i class="fa-solid fa-circle-play" style="font-size: 32px; margin-bottom: 12px; display: block; color: var(--border-color-active);"></i>
+            Configure simulation variables and click <strong>"Run Simulation Flow"</strong> to see high-fidelity request tracking.
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Tools Status Matrix -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 16px;">
+          <i class="fa-solid fa-table-list"></i>
+          Dynamic Authorization Matrix for Identity
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+          Below is the live catalog of available tools on the fake MCP server showing access eligibility for the selected agent.
+        </p>
+        <div class="tools-grid" id="toolsGrid">
+          <!-- Dynamically filled by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: YAML Editor + Visual Route Diagram -->
+    <div class="simulator-panel">
+
+      <!-- AccessPolicy Config Editor -->
+      <div class="card editor-panel">
+        <div class="card-title" style="margin-bottom: 0; padding-bottom: 16px;">
+          <i class="fa-solid fa-file-code"></i>
+          AccessPolicy Configuration (Kuadrant YAML CRD)
+        </div>
+
+        <div class="editor-wrapper">
+          <div class="editor-header">
+            <div class="editor-tab">
+              <i class="fa-solid fa-file-invoice"></i>
+              <span>policies/default-policy.yaml</span>
+            </div>
+            <span class="badge badge-purple" style="font-size: 9px;">MCPRouteAccessPolicy</span>
+          </div>
+          <textarea class="yaml-textarea" id="yamlContent" spellcheck="false"></textarea>
+        </div>
+
+        <div class="editor-actions">
+          <span class="feedback-msg" id="editorFeedback"></span>
+          <button class="btn" id="applyPolicyBtn">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Apply Policy
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Architecture Pipeline Diagram -->
+      <div class="card">
+        <div class="card-title">
+          <i class="fa-solid fa-sitemap"></i>
+          Request Flow Architecture Pipeline Diagram
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+          This visual represents how Envoy's <code>ext_proc</code> and Kuadrant's <code>AccessPolicy</code> coordinate authorization before reaching the target MCP Server.
+        </p>
+        
+        <div class="arch-visualizer">
+          <!-- Connector lines behind blocks -->
+          <div class="arch-connector connector-1" id="connector1"></div>
+          <div class="arch-connector connector-2" id="connector2"></div>
+          <div class="arch-connector connector-3" id="connector3"></div>
+
+          <!-- Step 1: Agent Request -->
+          <div class="arch-block" id="blockAgent">
+            <div class="icon"><i class="fa-solid fa-robot"></i></div>
+            <h3>LLM / Agent</h3>
+            <p>Initiator</p>
+          </div>
+
+          <!-- Step 2: Envoy ext_proc -->
+          <div class="arch-block" id="blockEnvoy">
+            <div class="icon"><i class="fa-solid fa-network-wired"></i></div>
+            <h3>Envoy (ext_proc)</h3>
+            <p>Header Injection</p>
+          </div>
+
+          <!-- Step 3: AccessPolicy -->
+          <div class="arch-block" id="blockAuth">
+            <div class="icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <h3>AccessPolicy</h3>
+            <p>Rules Engine</p>
+          </div>
+
+          <!-- Step 4: MCP Server -->
+          <div class="arch-block" id="blockMCP">
+            <div class="icon"><i class="fa-solid fa-server"></i></div>
+            <h3>MCP Server</h3>
+            <p>Tool Executor</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Interactive CEL Sandbox Playground -->
+      <div class="card sandbox-panel">
+        <div class="card-title">
+          <i class="fa-solid fa-flask"></i>
+          Interactive CEL Sandbox Playground
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+          Test your CEL expressions before deploying them to the AccessPolicy.
+        </p>
+        <div class="sandbox-grid">
+          <div class="input-field">
+            <label for="sandboxExpression"><i class="fa-solid fa-code"></i> CEL Expression</label>
+            <input type="text" id="sandboxExpression" placeholder="e.g. tool.arguments.filepath.startsWith('public/')">
+          </div>
+          <div class="input-field">
+            <label for="sandboxContext"><i class="fa-solid fa-cube"></i> Context JSON</label>
+            <textarea id="sandboxContext" rows="3" spellcheck="false" placeholder='{ "name": "read_file", "arguments": { "filepath": "public/docs.txt" } }'></textarea>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px;">
+          <button class="btn" id="runSandboxBtn">
+            <i class="fa-solid fa-play"></i> Evaluate
+          </button>
+          <div id="sandboxResult" class="sandbox-result">
+            <!-- Evaluation result will be shown here -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    </div> <!-- End MAIN TWO-COLUMN LAYOUT -->
+    
+    <!-- LIVE AUDIT LOGS TERMINAL -->
+    <div class="audit-log-terminal">
+      <div class="terminal-header">
+        <div class="terminal-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="terminal-title">
+          <i class="fa-solid fa-list-check"></i>
+          Live AccessPolicy Audit Logs
+        </div>
+      </div>
+      <div class="terminal-body" id="auditLogsBody">
+        <div class="log-entry log-system">System initialized. Waiting for gateway requests...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 40px; backdrop-filter: blur(12px);">
+    Designed for the CNCF Mentorship • MCP Gateway AccessPolicy Integration POC • Aryan Burnwal
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

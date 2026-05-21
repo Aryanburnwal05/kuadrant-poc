@@ -1,0 +1,16 @@
+{
+  "name": "kuadrant-mcp-accesspolicy-poc",
+  "version": "1.0.0",
+  "description": "Visual proof-of-concept for Kuadrant MCP Gateway AccessPolicy CRD mentorship project",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "js-yaml": "^4.1.0"
+  },
+  "author": "Aryan Burnwal",
+  "license": "Apache-2.0"
+}
