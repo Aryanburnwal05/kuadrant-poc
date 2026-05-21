@@ -9,11 +9,11 @@ Currently, when you host AI Model Context Protocol (MCP) servers behind an API G
 This POC acts as a mock API Gateway and Policy Engine. It intercepts incoming JSON requests from AI agents, extracts the exact tool they are trying to use, and evaluates it against a declarative `AccessPolicy` YAML file. It either allows the request to pass through to the MCP server or blocks it with a 403 Forbidden.
 
 **Main Features**
-- Dynamic authorization matrix based on client identity headers.
-- Support for Common Expression Language (CEL) rules (e.g., `tool.arguments.filepath.startsWith('public/')`).
-- Real-time security metrics (Total, Allowed, Denied, Protection Rate).
-- Interactive CEL Sandbox for testing rules safely.
-- Persistent live audit logs tracking every gateway decision.
+1. Dynamic authorization matrix based on client identity headers.
+2. Support for Common Expression Language (CEL) rules (e.g., `tool.arguments.filepath.startsWith('public/')`).
+3. Real-time security metrics (Total, Allowed, Denied, Protection Rate).
+4. Interactive CEL Sandbox for testing rules safely.
+5. Persistent live audit logs tracking every gateway decision.
 
 ---
 
@@ -21,13 +21,28 @@ This POC acts as a mock API Gateway and Policy Engine. It intercepts incoming JS
 
 Here is a simple look at how a request flows through the system:
 
-```mermaid
-flowchart LR
-  Agent[AI Agent] -->|POST /tools/call| Gateway[Gateway ext_proc]
-  Gateway -->|Extracts Tool Name| Engine[Policy Engine]
-  Engine -->|Evaluates AccessPolicy YAML| Decision{Allowed?}
-  Decision -- Yes --> MCP[Mock MCP Server]
-  Decision -- No --> Block[403 Forbidden]
+```text
+[ AI Agent ] 
+     |
+  (POST /tools/call)
+     |
+     v
+[ API Gateway (ext_proc) ]
+     |
+  (Extracts Tool Name & Injects Headers)
+     |
+     v
+[ Policy Engine ]
+     |
+  (Evaluates AccessPolicy YAML)
+     |
+    / \
+  (Allowed?)
+  /     \
+YES     NO
+ /       \
+v         v
+[ MCP Server ]    [ 403 Forbidden ]
 ```
 
 1. **MCP Gateway**: Intercepts the request and parses the body to extract the tool name and arguments.
@@ -42,9 +57,9 @@ flowchart LR
 
 Because this is a lightweight simulation designed for easy testing, you don't need a heavy Kubernetes or Go setup. You only need:
 
-- **Node.js**: v16 or newer
-- **npm**: v8 or newer
-- **Git**
+1. **Node.js**: v16 or newer
+2. **npm**: v8 or newer
+3. **Git**
 
 *(Note: There is no Docker or Kubernetes cluster required to run this standalone POC).*
 
@@ -65,12 +80,12 @@ cd kuadrant-poc
 
 Here are the important files in the repository:
 
-- `server.js`: The core Node.js backend. It acts as our mock Envoy gateway, Authorino policy engine, and the backend MCP server all in one.
-- `policies/default-policy.yaml`: The declarative policy configuration file where our rules are defined.
-- `public/index.html`: The main dashboard UI.
-- `public/css/style.css`: The styling for the dashboard.
-- `public/js/app.js`: The frontend client logic handling the interactive simulation and visual flows.
-- `package.json`: Contains project dependencies (`express`, `js-yaml`, `cors`).
+1. `server.js`: The core Node.js backend. It acts as our mock Envoy gateway, Authorino policy engine, and the backend MCP server all in one.
+2. `policies/default-policy.yaml`: The declarative policy configuration file where our rules are defined.
+3. `public/index.html`: The main dashboard UI.
+4. `public/css/style.css`: The styling for the dashboard.
+5. `public/js/app.js`: The frontend client logic handling the interactive simulation and visual flows.
+6. `package.json`: Contains project dependencies (`express`, `js-yaml`, `cors`).
 
 ---
 
@@ -144,9 +159,9 @@ This rule targets agents with the `student-agent` header and grants them explici
     - add
     - subtract
 ```
-- **name**: A unique identifier for the rule block.
-- **match**: The condition determining if this rule applies to the incoming request.
-- **allowedTools**: A strict list of tools the matched agent is allowed to execute.
+1. **name**: A unique identifier for the rule block.
+2. **match**: The condition determining if this rule applies to the incoming request.
+3. **allowedTools**: A strict list of tools the matched agent is allowed to execute.
 
 ### Allow Policy (Wildcard)
 This grants total access to everything. Perfect for an admin.
@@ -183,8 +198,8 @@ curl -X POST http://localhost:3000/api/simulate \
 
 **How to validate logs and metrics:**
 Simply navigate to the respective API endpoints in your browser or via curl:
-- `http://localhost:3000/api/metrics`
-- `http://localhost:3000/api/audit-logs`
+1. `http://localhost:3000/api/metrics`
+2. `http://localhost:3000/api/audit-logs`
 
 ---
 
@@ -193,41 +208,41 @@ Simply navigate to the respective API endpoints in your browser or via curl:
 Here are some common issues you might run into:
 
 ### Missing dependencies
-- **Symptoms**: Running `node server.js` throws an error like `Cannot find module 'express'`.
-- **Cause**: The npm packages were not installed.
-- **Fix**: Run `npm install` in the project root directory.
+1. **Symptoms**: Running `node server.js` throws an error like `Cannot find module 'express'`.
+2. **Cause**: The npm packages were not installed.
+3. **Fix**: Run `npm install` in the project root directory.
 
 ### Port already in use
-- **Symptoms**: Running `node server.js` throws an `EADDRINUSE: address already in use :::3000` error.
-- **Cause**: Another service is currently running on port 3000.
-- **Fix**: Find and kill the process using port 3000, or modify `PORT` in `server.js` to something like 8080.
+1. **Symptoms**: Running `node server.js` throws an `EADDRINUSE: address already in use :::3000` error.
+2. **Cause**: Another service is currently running on port 3000.
+3. **Fix**: Find and kill the process using port 3000, or modify `PORT` in `server.js` to something like 8080.
 
 ### Policy loading issues
-- **Symptoms**: The UI matrix shows no tools allowed, or the server logs YAML parsing errors.
-- **Cause**: The `policies/default-policy.yaml` has invalid indentation or syntax.
-- **Fix**: Check your YAML formatting. You can use the "Interactive CEL Sandbox" and "Live YAML Editor" in the dashboard to test for syntax errors.
+1. **Symptoms**: The UI matrix shows no tools allowed, or the server logs YAML parsing errors.
+2. **Cause**: The `policies/default-policy.yaml` has invalid indentation or syntax.
+3. **Fix**: Check your YAML formatting. You can use the "Interactive CEL Sandbox" and "Live YAML Editor" in the dashboard to test for syntax errors.
 
 ---
 
 ## Verification Checklist
 
 Follow these steps to confirm everything is working:
-- [ ] `npm install` completes successfully.
-- [ ] `node server.js` starts without crashing.
-- [ ] `http://localhost:3000` loads the dashboard.
-- [ ] Selecting `admin-agent` allows execution of `delete_database`.
-- [ ] Selecting `student-agent` blocks execution of `delete_database`.
-- [ ] The CEL sandbox evaluates `tool.arguments.filepath.startsWith('public/')` correctly.
-- [ ] Audit logs and Metrics increment when simulations are run.
+1. [ ] `npm install` completes successfully.
+2. [ ] `node server.js` starts without crashing.
+3. [ ] `http://localhost:3000` loads the dashboard.
+4. [ ] Selecting `admin-agent` allows execution of `delete_database`.
+5. [ ] Selecting `student-agent` blocks execution of `delete_database`.
+6. [ ] The CEL sandbox evaluates `tool.arguments.filepath.startsWith('public/')` correctly.
+7. [ ] Audit logs and Metrics increment when simulations are run.
 
 ---
 
 ## Future Improvements
 
 While this is a robust POC, future steps to bring this to production include:
-- Migrating the Node.js `ext_proc` simulation into a real Go-based Envoy filter.
-- Deploying the YAML `AccessPolicy` as a true Kubernetes CRD on a Kuadrant-enabled cluster.
-- Integrating with Authorino's official evaluation engine for real-time auth checks.
+1. Migrating the Node.js `ext_proc` simulation into a real Go-based Envoy filter.
+2. Deploying the YAML `AccessPolicy` as a true Kubernetes CRD on a Kuadrant-enabled cluster.
+3. Integrating with Authorino's official evaluation engine for real-time auth checks.
 
 ---
 
